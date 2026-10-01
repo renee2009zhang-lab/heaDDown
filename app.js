@@ -1,4 +1,7 @@
+import { mobilePortrait, setupMobile } from "./mobile.js";
+
 const root = document.documentElement;
+const experience = document.querySelector(".experience");
 const hero = document.querySelector(".xray-hero");
 const scaleInput = document.querySelector("#bone-scale");
 const scaleButtons = [...document.querySelectorAll(".scale-button")];
@@ -547,6 +550,7 @@ function settleReliefDrag(shouldComplete) {
 
 function setActiveSection(section) {
   const current = ["bone", "pain", "habits", "relief"].includes(section) ? section : "bone";
+  const previous = document.body.dataset.section;
   document.body.dataset.section = current;
   root.dataset.section = current;
   contentPages.forEach((page) => {
@@ -557,7 +561,8 @@ function setActiveSection(section) {
   if (current !== "relief") resetReliefExperience();
 
   if (current === "bone") {
-    if (window.scrollY < window.innerHeight * 0.2 && !selectedHotspot) startGuide();
+    if (mobilePortrait.matches && previous !== "bone") experience.scrollTop = 0;
+    if ((mobilePortrait.matches ? experience.scrollTop : window.scrollY) < window.innerHeight * 0.2 && !selectedHotspot) startGuide();
     window.requestAnimationFrame(syncBoneScrollState);
   } else {
     stopGuide();
@@ -728,6 +733,7 @@ navLinks.forEach((link) => {
 
 habitCarousel.addEventListener("wheel", (event) => {
   if (document.body.dataset.section !== "habits") return;
+  if (mobilePortrait.matches) return;
   event.preventDefault();
   if (habitDetail.classList.contains("is-mounted")) return;
 
@@ -1406,8 +1412,8 @@ window.addEventListener("keydown", (event) => {
 
 function syncBoneScrollState() {
   if (document.body.dataset.section !== "bone") return;
-  const scrollTop = Math.max(document.body.scrollTop, document.documentElement.scrollTop, window.scrollY);
-  const transitionDistance = window.innerHeight * 0.58;
+  const scrollTop = mobilePortrait.matches ? experience.scrollTop : Math.max(document.body.scrollTop, document.documentElement.scrollTop, window.scrollY);
+  const transitionDistance = mobilePortrait.matches ? Math.max(1, experience.clientHeight) : window.innerHeight * 0.58;
   const transitionProgress = Math.min(1, Math.max(0, scrollTop / transitionDistance));
   const pastFirstScreen = transitionProgress > 0.04;
   const pastHero = transitionProgress > 0.96;
@@ -1419,6 +1425,7 @@ function syncBoneScrollState() {
 }
 
 document.body.addEventListener("scroll", syncBoneScrollState, { passive: true });
+experience.addEventListener("scroll", syncBoneScrollState, { passive: true });
 window.addEventListener("scroll", syncBoneScrollState, { passive: true });
 
 window.addEventListener("hashchange", () => {
@@ -1429,12 +1436,14 @@ window.addEventListener("resize", () => {
   if (reliefDrag) settleReliefDrag(false);
   else if (reliefComplete) setReliefPosition(reliefMaxTravel());
   else setReliefPosition(reliefPosition);
-  setActiveSection(sectionFromHash());
+  if (!mobilePortrait.matches || document.body.dataset.section !== sectionFromHash()) {
+    setActiveSection(sectionFromHash());
+  }
   syncBoneScrollState();
 });
 
 hero.addEventListener("wheel", (event) => {
-  if (document.body.dataset.section !== "bone") return;
+  if (mobilePortrait.matches || document.body.dataset.section !== "bone") return;
   const scrollTop = Math.max(document.body.scrollTop, document.documentElement.scrollTop, window.scrollY);
   const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
   const delta = event.deltaY * unit;
@@ -1455,3 +1464,4 @@ updateHabitCarousel();
 resetReliefExperience();
 setActiveSection(sectionFromHash());
 syncBoneScrollState();
+setupMobile({ bones, muscles, selectMuscle, moveHabitCarousel, setBoneScale });
